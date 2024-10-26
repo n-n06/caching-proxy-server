@@ -1,0 +1,22 @@
+[tool.poetry]
+name = "caching-proxy-server"
+version = "0.1.0"
+description = ""
+authors = ["n_n06"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.13"
+requests = "^2.32.3"
+click = "^8.1.7"
+cachetools = "^5.5.0"
+
+
+[tool.poetry.group.dev.dependencies]
+pytest = "^8.3.3"
+black = "^24.10.0"
+flake8 = "^7.1.1"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
