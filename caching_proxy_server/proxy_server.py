@@ -1,10 +1,10 @@
 import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from .logger import setup_logging
-from .cache_handler import CacheHandler
 
-logger = setup_logging('proxy_server.log')
+from .cache_handler import CacheHandler
+from .config import logger
+
 
 
 class ProxyServer:
@@ -34,6 +34,7 @@ class ProxyServer:
             logger.info("Shutting down the proxy server.")
 
     class RequestHandler(BaseHTTPRequestHandler):
+        #TODO: change the logic to working with 1 origin and different endpoints
         def do_GET(self):
             cache_key = self.path
             try:
