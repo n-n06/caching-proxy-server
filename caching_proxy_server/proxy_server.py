@@ -10,7 +10,7 @@ from .config import logger
 class ProxyServer:
     def __init__(self, port : int = 8080):
         self.port = port
-        self.cache = CacheHandler()
+        self.cache = CacheHandler(3600)
 
     
     def run(self):
@@ -80,3 +80,5 @@ class ProxyServer:
                 self.end_headers()
                 self.wfile.write(b"Server error")
                 logger.error("Unexpected error: %s", e)
+
+

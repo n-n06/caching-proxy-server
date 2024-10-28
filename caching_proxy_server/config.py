@@ -1,3 +1,4 @@
 from .logger import setup_logging
 
-logger = setup_logging('proxy_server.log')
+
+logger = setup_logging('data/proxy_server.log')

@@ -11,7 +11,11 @@ from .proxy_server import ProxyServer
 def cli(port: int, origin: str, clear_cache):
     proxy = ProxyServer(port)
     if clear_cache:
-        
+        proxy.cache.clear()
+    elif port is not None and origin is not None:
+        proxy.run()
+    else:
+        logger.error("Please, provide either --clear-cache or both --port and --origin")
 
 
 
