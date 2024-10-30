@@ -1,18 +1,23 @@
 import requests
+from socketserver import BaseServer
 from http.server import BaseHTTPRequestHandler, HTTPServer
-
 
 from .cache_handler import CacheHandler
 from .config import logger
 
+cache = CacheHandler(3600)
 
 
 class ProxyServer:
-    def __init__(self, port : int = 8080):
+    def __init__(self, port : int = 8080, origin : str = "localhost"):
         self.port = port
-        self.cache = CacheHandler(3600)
+        self.origin = origin
+        global ORIGIN
+        ORIGIN = origin
+        global PORT
+        PORT = port
+        self.cache = cache
 
-    
     def run(self):
         server_address = ('', self.port)
         try: 
@@ -20,28 +25,35 @@ class ProxyServer:
             logger.info('Server started on port %d', self.port)
             httpd.serve_forever()
 
+        except KeyboardInterrupt:
+            logger.warning("Server interrupted by user.")
         except requests.exceptions.RequestException as e:
             logger.error("Error forwarding request: %s", e)
         except PermissionError as e:
             logger.error("Permission to the port %d denied", self.port)
         except OSError as e:
             logger.error("Port: %d is already in use or unavailalbe", self.port)
-        except KeyboardInterrupt:
-            logger.warning("Server interrupted by user.")
         except Exception as e:
             logger.error("Server encountered an unexpected error: %s", e) #use exc_info=True to get callback
         finally:
             logger.info("Shutting down the proxy server.")
+            exit()
 
     class RequestHandler(BaseHTTPRequestHandler):
-        #TODO: change the logic to working with 1 origin and different endpoints
+        #TODO: change the logic to working with 1 origin and different endpoints     
+        
+        def _get_endpoint(self) -> str:
+            return self.path.split(f"{self.server.server_address}")[-1]
+
+
         def do_GET(self):
             cache_key = self.path
+            
             try:
 
                 logger.info('Received a GET request for %s', self.path)
 
-                cached_response = self.server.cache.get(cache_key)
+                cached_response = cache.get(cache_key)
 
                 if cached_response:
                     logger.info('Cache hit for %s', self.path)
@@ -52,10 +64,10 @@ class ProxyServer:
                     return
 
                 logger.info("Cache miss for %s; fetching from server...", cache_key)
-                response = requests.get(self.path)
+                response = requests.get(f"{ORIGIN}:{PORT}{self.path}")
                 response.raise_for_status()
 
-                self.server.cache.set(cache_key, response.content)
+                cache.set(cache_key, response.content)
                 self.send_response(response.status_code)
                 self.send_header('X-Cache', 'MISS')
                 self.end_headers()
