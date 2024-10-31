@@ -1,5 +1,4 @@
 import requests
-from socketserver import BaseServer
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 from .cache_handler import CacheHandler
@@ -9,7 +8,7 @@ cache = CacheHandler(3600)
 
 
 class ProxyServer:
-    def __init__(self, port : int = 8080, origin : str = "localhost"):
+    def __init__(self, port : int, origin : str):
         self.port = port
         self.origin = origin
         global ORIGIN
@@ -17,6 +16,9 @@ class ProxyServer:
         global PORT
         PORT = port
         self.cache = cache
+
+    # def pass_server_data():
+
 
     def run(self):
         server_address = ('', self.port)
@@ -46,6 +48,7 @@ class ProxyServer:
             return self.path.split(f"{self.server.server_address}")[-1]
 
 
+
         def do_GET(self):
             cache_key = self.path
             
@@ -64,7 +67,7 @@ class ProxyServer:
                     return
 
                 logger.info("Cache miss for %s; fetching from server...", cache_key)
-                response = requests.get(f"{ORIGIN}:{PORT}{self.path}")
+                response = requests.get(f"{ORIGIN}{self.path}")
                 response.raise_for_status()
 
                 cache.set(cache_key, response.content)
