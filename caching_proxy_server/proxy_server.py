@@ -17,7 +17,6 @@ class ProxyServer:
         PORT = port
         self.cache = cache
 
-    # def pass_server_data():
 
 
     def run(self):
@@ -42,12 +41,7 @@ class ProxyServer:
             exit()
 
     class RequestHandler(BaseHTTPRequestHandler):
-        #TODO: change the logic to working with 1 origin and different endpoints     
-        
-        def _get_endpoint(self) -> str:
-            return self.path.split(f"{self.server.server_address}")[-1]
-
-
+     
 
         def do_GET(self):
             cache_key = self.path
@@ -82,11 +76,6 @@ class ProxyServer:
                 self.wfile.write(b"Error reaching the endpoint")
                 logger.error("Request error: %s", e)
 
-            # except KeyError: #related to cache - may delete later
-            #     self.send_response(500)
-            #     self.end_headers()
-            #     self.wfile.write(b"Cache error")
-            #
             except BrokenPipeError:
                 logger.error("Client disconnected unexpectedly")
             
