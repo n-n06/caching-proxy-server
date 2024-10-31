@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from .cache_handler import CacheHandler
 from .config import logger
 
-cache = CacheHandler(3600)
+cache = CacheHandler()
 
 
 class ProxyServer:
@@ -28,6 +28,7 @@ class ProxyServer:
 
         except KeyboardInterrupt:
             logger.warning("Server interrupted by user.")
+            self.cache.save_cache()
         except requests.exceptions.RequestException as e:
             logger.error("Error forwarding request: %s", e)
         except PermissionError as e:
