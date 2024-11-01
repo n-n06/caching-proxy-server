@@ -23,7 +23,7 @@ class ProxyServer:
         server_address = ('', self.port)
         try: 
             httpd = HTTPServer(server_address, self.RequestHandler)
-            logger.info('Server started on port %d', self.port)
+            logger.info('Server started on port localhost:%d', self.port)
             httpd.serve_forever()
 
         except KeyboardInterrupt:

@@ -9,6 +9,9 @@ from .proxy_server import ProxyServer
 @click.option("--origin", "-o", type=str, help="URL of the target server")
 @click.option("--clear-cache", is_flag=True, help="Clear the proxy server's cache")
 def cli(port: int, origin: str, clear_cache):
+    '''
+    Minimalist caching proxy server. 
+    '''
     proxy = ProxyServer(port, origin)
     if clear_cache:
         proxy.cache.clear()

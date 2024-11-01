@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "caching-proxy-server"
 version = "0.1.0"
-description = ""
+description = "Minimalistic caching proxy server"
 authors = ["n_n06"]
 readme = "README.md"
 
