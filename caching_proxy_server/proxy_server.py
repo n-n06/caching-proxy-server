@@ -1,3 +1,6 @@
+from os import startfile
+from threading import Thread
+
 import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
@@ -16,27 +19,42 @@ class ProxyServer:
         global PORT
         PORT = port
         self.cache = cache
+        
+        self.httpd = None
+        self.server_thread : Thread
 
     def run(self):
         server_address = ('', self.port)
-        try: 
-            httpd = HTTPServer(server_address, self.RequestHandler)
-            logger.info('Server started on port http://localhost:%d', self.port)
-            httpd.serve_forever()
+        self.httpd = HTTPServer(server_address, self.RequestHandler)
 
-        except KeyboardInterrupt:
-            logger.warning("Server interrupted by user.")
-        except requests.exceptions.RequestException as e:
-            logger.error("Error forwarding request: %s", e)
-        except PermissionError as e:
-            logger.error("Permission to the port %d denied", self.port)
-        except OSError as e:
-            logger.error("Port: %d is already in use or unavailalbe", self.port)
-        except Exception as e:
-            logger.error("Server encountered an unexpected error: %s", e) #use exc_info=True to get callback
-        finally:
+        def start_server():
+            try: 
+                logger.info('Server started on port http://localhost:%d.', self.port)
+                self.httpd.serve_forever()
+            except requests.exceptions.RequestException as e:
+                logger.error("Error forwarding request: %s.", e)
+            except PermissionError as e:
+                logger.error("Permission to the port %d denied.", self.port)
+            except OSError as e:
+                logger.error("Port: %d is already in use or unavailalbe.", self.port)
+            except Exception as e:
+                logger.error("Server encountered an unexpected error: %s.", e) #use exc_info=True to get callback
+            finally:
+                logger.info("Proxy server has been successfully stopped.")
+
+
+        self.server_thread = Thread(target=start_server)
+        self.server_thread.start()
+
+
+    def stop(self):
+        if self.httpd:
+            self.cache.save_cache()
+            self.httpd.shutdown()
+            self.httpd.server_close()
+            self.server_thread.join()
             logger.info("Shutting down the proxy server.")
-            exit()
+
 
     class RequestHandler(BaseHTTPRequestHandler):
         #TODO: change the logic to working with 1 origin and different endpoints     

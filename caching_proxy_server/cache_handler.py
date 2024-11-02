@@ -1,3 +1,4 @@
+import os
 import pickle
 import signal
 import atexit
@@ -33,6 +34,7 @@ class CacheHandler:
             return None
 
     def clear(self):
+        os.remove('cache.pkl')
         self.cache.clear()
 
     def handle_exit(self, sig, frame):
