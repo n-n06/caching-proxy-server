@@ -1,5 +1,5 @@
 # Caching Proxy Server
-> Minimalisting caching proxy server.
+> Minimalistic caching proxy server.
 
 ## Purpose
 Speed-up ⏩: the process of requests by caching 🗄️ their results on a proxy server.
