@@ -52,21 +52,26 @@ class ProxyServer:
                 logger.info('Received a GET request for %s', self.path)
 
                 cached_response = cache.get(cache_key)
+                logger.info(cached_response)
 
                 if cached_response:
                     logger.info('Cache hit for %s', self.path)
                     self.send_response(200)
+                    for key, value in cached_response.headers.items():
+                        self.send_header(key, value)
                     self.send_header('X-Cache', 'HIT')
                     self.end_headers()
-                    self.wfile.write(cached_response)
+                    self.wfile.write(cached_response.content)
                     return
 
                 logger.info("Cache miss for %s; fetching from server...", cache_key)
                 response = requests.get(f"{ORIGIN}{self.path}")
                 response.raise_for_status()
-
-                cache.set(cache_key, response.content)
+                    
                 self.send_response(response.status_code)
+                cache.set(cache_key, response)
+                for key, value in response.headers.items():
+                    self.send_header(key, value)
                 self.send_header('X-Cache', 'MISS')
                 self.end_headers()
                 self.wfile.write(response.content)

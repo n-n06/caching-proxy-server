@@ -20,7 +20,7 @@ def test_proxy_forwards_request(runner, mock_response):
     with patch("requests.get") as mock_get:
         mock_get.return_value = mock_response
 
-        result = runner.invoke(main.cli, ["--port", "3000", "--origin", "http://dummyjson.com"])
+        result = runner.invoke(cli.cli, ["--port", "3000", "--origin", "https://api.jikan.moe"])
 
         assert result.exit_code == 0
-        assert "Proxy server started" in result.output
+        assert "Server started on port" in result.output
