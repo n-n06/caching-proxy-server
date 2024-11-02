@@ -2,7 +2,6 @@ import pickle
 import signal
 import atexit
 import cachetools
-from requests import Response
 
 
 class CacheHandler:
@@ -24,10 +23,10 @@ class CacheHandler:
         with open(self.CACHE_FILE, 'wb') as f:
             pickle.dump(self.cache, f)
 
-    def set(self, key : str, value : Response):
+    def set(self, key, value):
         self.cache[key] = value;
 
-    def get(self, key) -> Response | None:
+    def get(self, key):
         try:
             return self.cache[key]
         except KeyError:

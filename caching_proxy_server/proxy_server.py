@@ -4,7 +4,7 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 from .cache_handler import CacheHandler
 from .config import logger
 
-cache = CacheHandler()
+cache = CacheHandler(3600)
 
 
 class ProxyServer:
@@ -17,18 +17,15 @@ class ProxyServer:
         PORT = port
         self.cache = cache
 
-
-
     def run(self):
         server_address = ('', self.port)
         try: 
             httpd = HTTPServer(server_address, self.RequestHandler)
-            logger.info('Server started on port localhost:%d', self.port)
+            logger.info('Server started on port http://localhost:%d', self.port)
             httpd.serve_forever()
 
         except KeyboardInterrupt:
             logger.warning("Server interrupted by user.")
-            self.cache.save_cache()
         except requests.exceptions.RequestException as e:
             logger.error("Error forwarding request: %s", e)
         except PermissionError as e:
@@ -42,7 +39,8 @@ class ProxyServer:
             exit()
 
     class RequestHandler(BaseHTTPRequestHandler):
-     
+        #TODO: change the logic to working with 1 origin and different endpoints     
+        
 
         def do_GET(self):
             cache_key = self.path
@@ -52,26 +50,21 @@ class ProxyServer:
                 logger.info('Received a GET request for %s', self.path)
 
                 cached_response = cache.get(cache_key)
-                logger.info(cached_response)
 
                 if cached_response:
                     logger.info('Cache hit for %s', self.path)
                     self.send_response(200)
-                    for key, value in cached_response.headers.items():
-                        self.send_header(key, value)
                     self.send_header('X-Cache', 'HIT')
                     self.end_headers()
-                    self.wfile.write(cached_response.content)
+                    self.wfile.write(cached_response)
                     return
 
                 logger.info("Cache miss for %s; fetching from server...", cache_key)
                 response = requests.get(f"{ORIGIN}{self.path}")
                 response.raise_for_status()
-                    
+
+                cache.set(cache_key, response.content)
                 self.send_response(response.status_code)
-                cache.set(cache_key, response)
-                for key, value in response.headers.items():
-                    self.send_header(key, value)
                 self.send_header('X-Cache', 'MISS')
                 self.end_headers()
                 self.wfile.write(response.content)
@@ -82,6 +75,11 @@ class ProxyServer:
                 self.wfile.write(b"Error reaching the endpoint")
                 logger.error("Request error: %s", e)
 
+            # except KeyError: #related to cache - may delete later
+            #     self.send_response(500)
+            #     self.end_headers()
+            #     self.wfile.write(b"Cache error")
+            #
             except BrokenPipeError:
                 logger.error("Client disconnected unexpectedly")
             
