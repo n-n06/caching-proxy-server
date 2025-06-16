@@ -1,4 +1,5 @@
 from threading import Thread
+from typing import Any
 
 import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -55,45 +56,86 @@ class ProxyServer:
             logger.info("Shutting down the proxy server.")
 
     class RequestHandler(BaseHTTPRequestHandler):
+        def log_message(self, format: str, *args: Any) -> None:
+            """
+            Suppressing the default logger
+            """
+            pass
 
-        def do_GET(self):
-            cache_key = self.path
+        def handle_proxy_request(self):
+            method = self.command
+            url = f"{ORIGIN}{self.path}"
+            headers = {
+                k: v for k, v in self.headers.items()
+            }
+            content_length = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(
+                content_length
+            ) if content_length > 0 else None
 
             try:
+                logger.info("Received a %s request for %s", method, self.path)
 
-                logger.info("Received a GET request for %s", self.path)
+                if method == "GET":
+                    cached_response = cache.get(self.path)
 
-                cached_response = cache.get(cache_key)
+                    if cached_response:
+                        logger.info("Cache hit for %s", self.path)
+                        self.send_response(200)
+                        self.send_header("X-Cache", "HIT")
+                        self.end_headers()
+                        self.wfile.write(cached_response)
+                        return
 
-                if cached_response:
-                    logger.info("Cache hit for %s", self.path)
-                    self.send_response(200)
-                    self.send_header("X-Cache", "HIT")
-                    self.end_headers()
-                    self.wfile.write(cached_response)
-                    return
-
-                logger.info("Cache miss for %s; fetching from server...", cache_key)
-                response = requests.get(f"{ORIGIN}{self.path}")
+                response = requests.request(
+                    method, url, headers=headers, data=body
+                )
                 response.raise_for_status()
 
-                cache.set(cache_key, response.content)
+                if method == "GET":
+                    cache.set(self.path, response.content)
+
                 self.send_response(response.status_code)
-                self.send_header("X-Cache", "MISS")
+                for key, value in response.headers.items():
+                    if key.lower() != 'transfer-encoding':
+                        self.send_header(key, value)
+                if method == "GET":
+                    self.send_header("X-Cache", "MISS")
                 self.end_headers()
                 self.wfile.write(response.content)
 
             except requests.exceptions.RequestException as e:
+                logger.error("Request error: %s", e)
                 self.send_response(502)
                 self.end_headers()
-                self.wfile.write(b"Error reaching the endpoint")
-                logger.error("Request error: %s", e)
+                self.wfile.write(b"Bad gateway")
 
             except BrokenPipeError:
                 logger.error("Client disconnected unexpectedly")
 
             except Exception as e:
+                logger.error("Unexpected error: %s", e)
                 self.send_response(500)
                 self.end_headers()
                 self.wfile.write(b"Server error")
-                logger.error("Unexpected error: %s", e)
+
+        def do_GET(self):
+            self.handle_proxy_request()
+
+        def do_POST(self):
+            self.handle_proxy_request()
+
+        def do_PUT(self):
+            self.handle_proxy_request()
+
+        def do_DELETE(self):
+            self.handle_proxy_request()
+
+        def do_PATCH(self):
+            self.handle_proxy_request()
+
+        def do_HEAD(self):
+            self.handle_proxy_request()
+
+        def do_OPTIONS(self):
+            self.handle_proxy_request()
