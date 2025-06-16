@@ -67,6 +67,7 @@ class ProxyServer:
             url = f"{ORIGIN}{self.path}"
             headers = {
                 k: v for k, v in self.headers.items()
+                if k.lower() != "host" # ignore the host headers
             }
             content_length = int(self.headers.get("Content-Length", 0))
             body = self.rfile.read(
@@ -77,6 +78,7 @@ class ProxyServer:
                 logger.info("Received a %s request for %s", method, self.path)
 
                 if method == "GET":
+                    # Retrieve only GET requests from cache
                     cached_response = cache.get(self.path)
 
                     if cached_response:
@@ -86,21 +88,34 @@ class ProxyServer:
                         self.end_headers()
                         self.wfile.write(cached_response)
                         return
+        
+                    logger.info("Cache miss for %s", self.path)
 
+                # Execute the actual response
                 response = requests.request(
                     method, url, headers=headers, data=body
                 )
                 response.raise_for_status()
 
                 if method == "GET":
+                    # Cache only get requests
                     cache.set(self.path, response.content)
 
                 self.send_response(response.status_code)
+
+                # Ignoring headers to avoid confusion
+                ignored_headers = (
+                    'transfer-encoding',
+                    'content-length',
+                    'content-encoding'
+                )
                 for key, value in response.headers.items():
-                    if key.lower() != 'transfer-encoding':
+                    if key.lower() not in ignored_headers:
                         self.send_header(key, value)
+
                 if method == "GET":
                     self.send_header("X-Cache", "MISS")
+                
                 self.end_headers()
                 self.wfile.write(response.content)
 
@@ -119,6 +134,7 @@ class ProxyServer:
                 self.end_headers()
                 self.wfile.write(b"Server error")
 
+        # Handle all Request types
         def do_GET(self):
             self.handle_proxy_request()
 

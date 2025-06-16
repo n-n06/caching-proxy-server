@@ -22,7 +22,7 @@ class ColorFormatter(logging.Formatter):
     def format(self, record):
         log_fmt = self.FORMATS.get(record.levelno, "%(message)s")
         formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - " + log_fmt, datefmt="%Y-%m-%d %H:%M:%S"
+            "[%(asctime)s] - %(name)s - " + log_fmt, datefmt="%Y-%m-%d %H:%M:%S"
         )
         return formatter.format(record)
 
