@@ -1,11 +1,15 @@
 from threading import Thread
 from typing import Any
+import time
 
 import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+from caching_proxy_server.kafka.logger import log_req_kafka, producer
+
 from .cache_handler import CacheHandler
 from .config import logger
+
 
 cache = CacheHandler(3600)
 
@@ -53,6 +57,7 @@ class ProxyServer:
             self.httpd.shutdown()
             self.httpd.server_close()
             self.server_thread.join()
+            producer.flush()
             logger.info("Shutting down the proxy server.")
 
     class RequestHandler(BaseHTTPRequestHandler):
@@ -63,6 +68,8 @@ class ProxyServer:
             pass
 
         def handle_proxy_request(self):
+            start_time = time.perf_counter()
+
             method = self.command
             url = f"{ORIGIN}{self.path}"
             headers = {
@@ -87,6 +94,18 @@ class ProxyServer:
                         self.send_header("X-Cache", "HIT")
                         self.end_headers()
                         self.wfile.write(cached_response)
+
+                        duration = round(
+                            1000 * (time.perf_counter() - start_time), 2
+                        )
+                        log_req_kafka({
+                            "method": method,
+                            "path": self.path,
+                            "status_code": 200,
+                            "cache_status": "HIT",
+                            "duration": duration
+                        })
+
                         return
         
                     logger.info("Cache miss for %s", self.path)
@@ -118,6 +137,19 @@ class ProxyServer:
                 
                 self.end_headers()
                 self.wfile.write(response.content)
+
+                duration = round(
+                    1000 * (time.perf_counter() - start_time), 2
+                )
+                log_req_kafka({
+                    "method": method,
+                    "path": self.path,
+                    "status_code": response.status_code,
+                    "cache_status": "MISS" if method == "GET" else "N/A",
+                    "duration": duration
+                })
+
+
 
             except requests.exceptions.RequestException as e:
                 logger.error("Request error: %s", e)
