@@ -13,10 +13,11 @@ After that, use the `kafka/docker-compose.yml` to spin up the container. Edit th
 
 
 ##### Launching the container
-Make sure to start the Docker daemon beforehand.
+>Make sure to start the Docker daemon beforehand.
 
+First, spin up the Docker container for the Kafka service.
 ```
-docker compose up -d
+docker compose up -d broker
 ```
 
 ##### Viewing logs to verify that Kafka is working
@@ -67,44 +68,38 @@ caching-proxy --clear-cache
 
 ## Advanced - Metrics and Prometheus 
 ### Setting Up Prometheus with Docker 📊 
-To monitor the proxy server metrics, you can run Prometheus in Docker and configure it to scrape metrics from your Python app using the prometheus_client library.
+To monitor the proxy server metrics, you can run Prometheus in Docker and configure it to scrape metrics from your Python app using the `prometheus_client` library.
 
-#### Create Prometheus Config File 📁
-Create a file named `prometheus.yml` in your project root with the following contents:
+#### Prometheus Config File 📁
+To not hardcode the values of the IP address, I designed a Bash script that would do take a `HOST_IP` env variable and place it into the `generated-prometheus.yml` file.
 
-```yml
+##### Step 1 - setup your host IP as an env variable
+```.env
+HOST_IP=192.168.x.x
+```
+This variable will be placed in the template file.
+```
 global:
   scrape_interval: 5s
 
 scrape_configs:
-  - job_name: 'caching-proxy-server'
+  - job_name: 'proxy'
     static_configs:
-      - targets: ['host.docker.internal:8000']
+      - targets: ['${HOST_IP}:8000'] # use your port
 ```
-host.docker.internal allows Prometheus running in a Docker container to access the host machine (your app must call start_http_server(8000) in code).
-
->If you're using Linux and host.docker.internal doesn't work, replace it with your actual local IP (e.g. 192.168.1.5:8000) or run everything inside the same Docker network.
-
-#### Create Docker Compose Entry for Prometheus 🐳
-Add this to your docker-compose.yml or create a new one:
-
-```yaml
-version: '3.7'
-
-services:
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-    ports:
-      - 9090:9090
+##### Step 2 - run the script to place the IP address into Prometheus config dynamically
+The script `start-prometheus.yml` loads the environment, substitutes the IP address into your config, and runs Docker Compose for the Prometheus service.
+Make it executable:
 ```
-Then run:
-
-```bash
-docker-compose up -d prometheus
+chmod +x start-prometheus.sh
 ```
+And run:
+```
+./start-prometheus.sh
+```
+
+
+
 #### Verify Prometheus ✅ 
 - Visit http://localhost:9090
 - Go to Status > Targets — you should see your proxy server as a UP target.

@@ -6,4 +6,4 @@ scrape_configs:
     static_configs:
       # the location of the client from the project 
       # change the PROMETHEUS_PORT constant to your liking
-      - targets: ['192.168.172.76:8000']  
+      - targets: ['${HOST_IP}:8000']  
