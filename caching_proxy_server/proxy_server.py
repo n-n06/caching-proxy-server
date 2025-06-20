@@ -5,7 +5,10 @@ import time
 import requests
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-from caching_proxy_server.kafka.logger import log_req_kafka, producer
+from caching_proxy_server.kafka.producer import log_req_kafka, producer
+from caching_proxy_server.kafka.schema import CacheStatus
+from caching_proxy_server.prometheus.metrics import PROMETHEUS_PORT
+from caching_proxy_server.prometheus.metrics_handlers import mark_proxy_down, mark_proxy_up
 
 from .cache_handler import CacheHandler
 from .config import logger
@@ -28,12 +31,18 @@ class ProxyServer:
         self.server_thread: Thread
 
     def run(self):
+        logger.info(
+            "Startin Prometheus server on port http://localhost:%d.", 
+            PROMETHEUS_PORT
+        )
+
         server_address = ("", self.port)
         self.httpd = HTTPServer(server_address, self.RequestHandler)
 
         def start_server():
             try:
                 logger.info("Server started on port http://localhost:%d.", self.port)
+                mark_proxy_up()
                 self.httpd.serve_forever()
             except requests.exceptions.RequestException as e:
                 logger.error("Error forwarding request: %s.", e)
@@ -58,6 +67,7 @@ class ProxyServer:
             self.httpd.server_close()
             self.server_thread.join()
             producer.flush()
+            mark_proxy_down()
             logger.info("Shutting down the proxy server.")
 
     class RequestHandler(BaseHTTPRequestHandler):
@@ -102,8 +112,11 @@ class ProxyServer:
                             "method": method,
                             "path": self.path,
                             "status_code": 200,
-                            "cache_status": "HIT",
-                            "duration": duration
+                            "cache_status": CacheStatus.HIT,
+                            "duration_ms": duration,
+                            "timestamp" : time.time(),
+                            "request_size" : content_length,
+                            'response_size' : len(cached_response)
                         })
 
                         return
@@ -145,8 +158,12 @@ class ProxyServer:
                     "method": method,
                     "path": self.path,
                     "status_code": response.status_code,
-                    "cache_status": "MISS" if method == "GET" else "N/A",
-                    "duration": duration
+                    "cache_status": 
+                        CacheStatus.MISS if method == "GET" else CacheStatus.UNKNOWN,
+                    "duration_ms": duration,
+                    "request_size" : content_length,
+                    "response_size" : len(response.content),
+                    "timestamp" : time.time()
                 })
 
 

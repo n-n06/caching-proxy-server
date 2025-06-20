@@ -2,6 +2,7 @@ from confluent_kafka import Producer
 import json
 import time
 
+from .schema import LogMessage
 from ..config import logger as global_logger
 
 config = {
@@ -23,13 +24,9 @@ def delivery_callback(err, msg):
         )
 
 
-def log_req_kafka(data: dict):
+def log_req_kafka(data: LogMessage):
     try:
-        new_data = data.copy()
-        new_data.update(
-            {"timestamp" : time.time()}
-        )
-        message = json.dumps(new_data)
+        message = json.dumps(data)
         producer.produce(
             'log-topic',
             message.encode("utf-8"),

@@ -3,3 +3,7 @@ cache.pkl
 __pycache__/
 *.pyc
 *.pyo
+.env
+*.log
+.prometheus-data/
+.kafka-logs/

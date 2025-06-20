@@ -2,6 +2,7 @@ import logging
 
 
 class LogColor:
+    """Color Codes"""
     HEADER = "\033[95m"
     BLUE = "\033[94m"
     GREEN = "\033[92m"
@@ -27,7 +28,7 @@ class ColorFormatter(logging.Formatter):
         return formatter.format(record)
 
 
-def setup_logging():
+def setup_logging(name: str = "ProxyServer"):
     logger = logging.getLogger("ProxyServer")
     logger.setLevel(logging.INFO)
 
