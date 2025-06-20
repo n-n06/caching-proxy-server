@@ -4,15 +4,18 @@
 ## Purpose
 Speed-up ⏩: the process of requests by caching 🗄️ their results on a proxy server.
 
+## Installation 
+...
+
 ## Usage
 ### Kafka setup 🌊
 This project uses Kafka on Docker as described [here](https://developer.confluent.io/confluent-tutorials/kafka-on-docker/).
-#### TL;DR
+
 First, install [Docker Desktop](https://www.docker.com/products/docker-desktop/) and setup an account in [Docker Hub](https://hub.docker.com/explore). Other than that, we do not need to install anything else (like Zookeeper).
 After that, use the `kafka/docker-compose.yml` to spin up the container. Edit the `.yml` file for your needs
 
 
-##### Launching the container
+#### Launching the container
 >Make sure to start the Docker daemon beforehand.
 
 First, spin up the Docker container for the Kafka service.
@@ -20,12 +23,12 @@ First, spin up the Docker container for the Kafka service.
 docker compose up -d broker
 ```
 
-##### Viewing logs to verify that Kafka is working
+#### Viewing logs to verify that Kafka has started
 ```
 docker logs broker # or howevert you named the service
 ```
 
-##### Creating a new Kafka topic
+#### Creating a new Kafka topic
 Open a command terminal on the Kafka container:
 ```
 docker exec -it -w /opt/kafka/bin broker sh
@@ -66,14 +69,13 @@ In order to clarify from where the response is set, the response has a `X-Cache`
 caching-proxy --clear-cache
 ```
 
+
 ## Advanced - Metrics and Prometheus 
 ### Setting Up Prometheus with Docker 📊 
 To monitor the proxy server metrics, you can run Prometheus in Docker and configure it to scrape metrics from your Python app using the `prometheus_client` library.
-
-#### Prometheus Config File 📁
 To not hardcode the values of the IP address, I designed a Bash script that would do take a `HOST_IP` env variable and place it into the `generated-prometheus.yml` file.
 
-##### Step 1 - setup your host IP as an env variable
+#### Step 1 - setup your host IP as an env variable
 ```.env
 HOST_IP=192.168.x.x
 ```
@@ -87,7 +89,7 @@ scrape_configs:
     static_configs:
       - targets: ['${HOST_IP}:8000'] # use your port
 ```
-##### Step 2 - run the script to place the IP address into Prometheus config dynamically
+#### Step 2 - run the script to place the IP address into Prometheus config dynamically
 The script `start-prometheus.yml` loads the environment, substitutes the IP address into your config, and runs Docker Compose for the Prometheus service.
 Make it executable:
 ```
@@ -98,6 +100,13 @@ And run:
 ./start-prometheus.sh
 ```
 
+#### Step 3 - run the Python script that creates a client for Prometheus
+The client starts up on `localhost:8000`. You can edit this settings in the `caching-proxy-server/prometheus/metrics.py` file in the `PROMETHEUS_PORT` constant.
+To start the client, execute this command in **the root of the project**
+```bash
+python3 -m caching_proxy_server.kafka.consumer
+```
+After running this script, you will see the logs of a Kafka consumer that are then passed to the Prometheus Database.
 
 
 #### Verify Prometheus ✅ 
