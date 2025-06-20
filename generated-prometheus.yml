@@ -1,0 +1,9 @@
+global:
+  scrape_interval: 5s
+
+scrape_configs:
+  - job_name: 'proxy_server'
+    static_configs:
+      # the location of the client from the project 
+      # change the PROMETHEUS_PORT constant to your liking
+      - targets: ['192.168.172.76:8000']  
