@@ -1,4 +1,5 @@
 ./data
+poetry.lock
 cache.pkl
 __pycache__/
 *.pyc
